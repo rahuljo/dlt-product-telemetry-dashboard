@@ -59,17 +59,29 @@ for idx, date in enumerate(weekends):
 @st.cache_data(ttl=60*60*24)
 def get_data() -> pd.DataFrame:
 	data_dict = {
-		'pipeline_extract': pd.read_csv('data\\pipeline_extract.csv'),
-		'pipeline_load': pd.read_csv('data\\pipeline_load.csv'),
-		'pipeline_normalize': pd.read_csv('data\\pipeline_normalize.csv'),
-		'pipeline_run': pd.read_csv('data\\pipeline_run.csv'),
-		'command_deploy': pd.read_csv('data\\command_deploy.csv'),
-		'command_init': pd.read_csv('data\\command_init.csv'),
-		'command_list_pipelines': pd.read_csv('data\\command_list_pipelines.csv'),
-		'command_pipeline': pd.read_csv('data\\command_pipeline.csv'),
-		'command_telemetry': pd.read_csv('data\\command_telemetry.csv'),
-		'command_telemetry_switch': pd.read_csv('data\\command_telemetry_switch.csv'),
-	}
+		'pipeline_extract': os.path.join('data','pipeline_extract.csv'),
+		'pipeline_load': os.path.join('data','pipeline_load.csv'),
+		'pipeline_normalize': os.path.join('data','pipeline_normalize.csv'),
+		'pipeline_run': os.path.join('data','pipeline_run.csv'),
+		'command_deploy': os.path.join('data','command_deploy.csv'),
+		'command_init': os.path.join('data','command_init.csv'),
+		'command_list_pipelines': os.path.join('data','command_list_pipelines.csv'),
+		'command_pipeline': os.path.join('data','command_pipeline.csv'),
+		'command_telemetry': os.path.join('data','command_telemetry.csv'),
+		'command_telemetry_switch': os.path.join('data','command_telemetry_switch.csv')
+	}	
+	# data_dict = {
+	# 	'pipeline_extract': pd.read_csv('data\\pipeline_extract.csv'),
+	# 	'pipeline_load': pd.read_csv('data\\pipeline_load.csv'),
+	# 	'pipeline_normalize': pd.read_csv('data\\pipeline_normalize.csv'),
+	# 	'pipeline_run': pd.read_csv('data\\pipeline_run.csv'),
+	# 	'command_deploy': pd.read_csv('data\\command_deploy.csv'),
+	# 	'command_init': pd.read_csv('data\\command_init.csv'),
+	# 	'command_list_pipelines': pd.read_csv('data\\command_list_pipelines.csv'),
+	# 	'command_pipeline': pd.read_csv('data\\command_pipeline.csv'),
+	# 	'command_telemetry': pd.read_csv('data\\command_telemetry.csv'),
+	# 	'command_telemetry_switch': pd.read_csv('data\\command_telemetry_switch.csv'),
+	# }
 	df = pd.concat(data_dict[key] for key in data_dict.keys())
 	df['date'] = pd.to_datetime(df['timestamp']).dt.date
 	df['idx'] = df.apply(
