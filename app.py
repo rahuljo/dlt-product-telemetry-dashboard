@@ -8,6 +8,15 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from google.oauth2 import service_account
+from google.cloud import bigquery
+
+
+credentials = service_account.Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"]
+)
+client = bigquery.Client(credentials=credentials)
+
 
 st.set_page_config(
   page_title="Product Telemetry Dashboard",
@@ -60,36 +69,67 @@ for idx, date in enumerate(weekends):
 @st.cache_data(ttl=60*60*24)
 def get_data() -> pd.DataFrame:
 	data_dict = {
-		'pipeline_extract': pd.read_csv(os.path.join('data','pipeline_extract.csv')),
-		'pipeline_load': pd.read_csv(os.path.join('data','pipeline_load.csv')),
-		'pipeline_normalize': pd.read_csv(os.path.join('data','pipeline_normalize.csv')),
-		'pipeline_run': pd.read_csv(os.path.join('data','pipeline_run.csv')),
-		'command_deploy': pd.read_csv(os.path.join('data','command_deploy.csv')),
-		'command_init': pd.read_csv(os.path.join('data','command_init.csv')),
-		'command_list_pipelines': pd.read_csv(os.path.join('data','command_list_pipelines.csv')),
-		'command_pipeline': pd.read_csv(os.path.join('data','command_pipeline.csv')),
-		'command_telemetry': pd.read_csv(os.path.join('data','command_telemetry.csv')),
-		'command_telemetry_switch': pd.read_csv(os.path.join('data','command_telemetry_switch.csv'))
+		'pipeline_extract': pd.read_gbq(
+													"select * from `dlthub-analytics.python_dlt.command_deploy`",
+													credentials=credentials
+												)	,
+		'pipeline_load': pd.read_gbq(
+													"select * from `dlthub-analytics.python_dlt.pipeline_load`",
+													credentials=credentials
+												)	,
+		'pipeline_normalize': pd.read_gbq(
+													"select * from `dlthub-analytics.python_dlt.pipeline_normalize`",
+													credentials=credentials
+												)	,
+		'pipeline_run': pd.read_gbq(
+													"select * from `dlthub-analytics.python_dlt.pipeline_run`",
+													credentials=credentials
+												)	,
+		'command_deploy': pd.read_gbq(
+													"select * from `dlthub-analytics.python_dlt.command_deploy`",
+													credentials=credentials
+												)	,
+		'command_init': pd.read_gbq(
+													"select * from `dlthub-analytics.python_dlt.command_init`",
+													credentials=credentials
+												)	,
+		'command_list_pipelines': pd.read_gbq(
+													"select * from `dlthub-analytics.python_dlt.command_list_pipelines`",
+													credentials=credentials
+												)	,
+		'command_pipeline': pd.read_gbq(
+													"select * from `dlthub-analytics.python_dlt.command_pipeline`",
+													credentials=credentials
+												)	,
+		'command_telemetry': pd.read_gbq(
+													"select * from `dlthub-analytics.python_dlt.command_telemetry`",
+													credentials=credentials
+												)	,
+		'command_telemetry_switch': pd.read_gbq(
+													"select * from `dlthub-analytics.python_dlt.command_telemetry_switch`",
+													credentials=credentials
+												)	,
 	}	
 	# data_dict = {
-	# 	'pipeline_extract': pd.read_csv('data\\pipeline_extract.csv'),
-	# 	'pipeline_load': pd.read_csv('data\\pipeline_load.csv'),
-	# 	'pipeline_normalize': pd.read_csv('data\\pipeline_normalize.csv'),
-	# 	'pipeline_run': pd.read_csv('data\\pipeline_run.csv'),
-	# 	'command_deploy': pd.read_csv('data\\command_deploy.csv'),
-	# 	'command_init': pd.read_csv('data\\command_init.csv'),
-	# 	'command_list_pipelines': pd.read_csv('data\\command_list_pipelines.csv'),
-	# 	'command_pipeline': pd.read_csv('data\\command_pipeline.csv'),
-	# 	'command_telemetry': pd.read_csv('data\\command_telemetry.csv'),
-	# 	'command_telemetry_switch': pd.read_csv('data\\command_telemetry_switch.csv'),
-	# }
+	# 	'pipeline_extract': pd.read_csv(os.path.join('data','pipeline_extract.csv')),
+	# 	'pipeline_load': pd.read_csv(os.path.join('data','pipeline_load.csv')),
+	# 	'pipeline_normalize': pd.read_csv(os.path.join('data','pipeline_normalize.csv')),
+	# 	'pipeline_run': pd.read_csv(os.path.join('data','pipeline_run.csv')),
+	# 	'command_deploy': pd.read_csv(os.path.join('data','command_deploy.csv')),
+	# 	'command_init': pd.read_csv(os.path.join('data','command_init.csv')),
+	# 	'command_list_pipelines': pd.read_csv(os.path.join('data','command_list_pipelines.csv')),
+	# 	'command_pipeline': pd.read_csv(os.path.join('data','command_pipeline.csv')),
+	# 	'command_telemetry': pd.read_csv(os.path.join('data','command_telemetry.csv')),
+	# 	'command_telemetry_switch': pd.read_csv(os.path.join('data','command_telemetry_switch.csv'))
+	# }	
+
 	df = pd.concat(data_dict[key] for key in data_dict.keys())
 	df['date'] = pd.to_datetime(df['timestamp']).dt.date
 	df['idx'] = df.apply(
 		lambda row: row['transaction_id'] if row['event_category']=='pipeline' else row['id'], 
 		axis=1
 	)
-	return df
+	return df.reset_index()
 
 complete_df = get_data()
 
@@ -157,16 +197,25 @@ if main_level == "Usage statistics":
 	main_df['notebook'] = main_df['context_exec_info'].apply(lambda x: 'notebook' in x)
 	main_df['colab'] = main_df['context_exec_info'].apply(lambda x: 'colab' in x)
 
-	docker_df = pd.DataFrame(main_df[main_df['docker']].groupby('date')['idx'].nunique())
+
+	docker_df = pd.DataFrame(main_df[main_df['docker']])
+	if len(docker_df):
+		docker_df = docker_df.groupby('date')['idx'].nunique()
 	docker_df = dateidx_df.join(docker_df,how='left').fillna(0).rename(columns={'idx':'docker'})
 
-	codespaces_df = pd.DataFrame(main_df[main_df['codespaces']].groupby('date')['idx'].nunique())
+	codespaces_df = pd.DataFrame(main_df[main_df['codespaces']])
+	if len(codespaces_df):
+		codespaces_df = codespaces_df.groupby('date')['idx'].nunique()
 	codespaces_df = dateidx_df.join(codespaces_df,how='left').fillna(0).rename(columns={'idx':'codespaces'})
 
-	notebook_df = pd.DataFrame(main_df[main_df['notebook']].groupby('date')['idx'].nunique())
+	notebook_df = pd.DataFrame(main_df[main_df['notebook']])
+	if len(notebook_df):
+		notebook_df = notebook_df.groupby('date')['idx'].nunique()
 	notebook_df = dateidx_df.join(notebook_df,how='left').fillna(0).rename(columns={'idx':'notebook'})
 
-	colab_df = pd.DataFrame(main_df[main_df['colab']].groupby('date')['idx'].nunique())
+	colab_df = pd.DataFrame(main_df[main_df['colab']])
+	if len(colab_df):
+		colab_df = colab_df.groupby('date')['idx'].nunique()
 	colab_df = dateidx_df.join(colab_df,how='left').fillna(0).rename(columns={'idx':'colab'})
 
 	environment_df = pd.concat([docker_df, codespaces_df, notebook_df, colab_df], axis=1)
