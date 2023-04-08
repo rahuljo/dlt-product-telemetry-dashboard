@@ -38,13 +38,15 @@ main_level = st.sidebar.selectbox(
 start_date = st.sidebar.date_input(
 	label='start date',
 	value=datetime.strptime(first_date,'%Y-%m-%d').date(),
-	min_value=datetime.strptime(first_date,'%Y-%m-%d').date()
+	min_value=datetime.strptime(first_date,'%Y-%m-%d').date(),
+	max_value=datetime.today()
 )
 
 end_date = st.sidebar.date_input(
 	label='end date',
 	value=datetime.today(),
 	min_value=start_date,
+	max_value=datetime.today()
 )
 
 dateidx_df = pd.DataFrame(index=pd.date_range(start_date,end_date))
