@@ -1,4 +1,6 @@
 numpy==1.20.1
 pandas==1.2.4
-streamlit==1.20.0
+streamlit==1.21.0
 plotly==5.14.0
+google-cloud-bigquery==3.8.0
+pandas-gbq==0.19.1
